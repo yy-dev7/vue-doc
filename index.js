@@ -4,6 +4,7 @@ const walk = require("acorn/dist/walk")
 const file = fs.readFileSync('./modal.vue', 'utf8')
 
 const comments = []
+const doc = {}
 const ast = acorn.parse(getScriptContent(file), {
   sourceType: 'module',
   ranges: false,
@@ -11,13 +12,16 @@ const ast = acorn.parse(getScriptContent(file), {
   onComment: comments
 })
 
-// traverse(ast.body)
+traverseVueTmpAst(ast)
 
-walk.full(ast, node => {
-  // console.log(node)
-  console.dir(node, { depth: null });
-  console.log('-----------------------------------')
-})
+// walk.full(ast, node => {
+  // if (node.key && node.key.name === 'name') {
+  //   console.log(node.value)
+  // }
+
+  // console.dir(node.type, { depth: null });
+  // console.log('-----------------------------------')
+// })
 
 // var buffer = Buffer.from(JSON.stringify(ast))
 // fs.writeFile("file.js", buffer, 'binary', (err)=>{
@@ -41,6 +45,48 @@ function getScriptContent(template) {
   return scriptContent[0].slice(8, -9)
 }
 
+function traverseVueTmpAst(ast) {
+  const body = ast.body
+
+  // 获取export表达式
+  const exportDefaultDeclaration = body.find(item => item.type === 'ExportDefaultDeclaration')
+
+  if (!exportDefaultDeclaration) return null
+
+  // 获取export中所有的属性
+  const properties = exportDefaultDeclaration.declaration.properties
+
+  for (let i = 0, l = properties.length; i < l; i++) {
+    const property = properties[i]
+    const keyName = property.key.name
+
+    if (keyName === 'name') {
+      // vue的模块名
+      doc.moduleName = property.value.value
+    }
+
+    // 获取props类型、注释、默认值
+    if (keyName === 'props') {
+      doc.props = getProps(property.value.properties)
+    }
+
+    // 获取methods中的$emit事件
+    if (keyName === 'methods') {
+      doc.events = getEvents(property.value.properties)
+    }
+  }
+
+  // console.log(properties)
+}
+
+function getProps(nodes) {
+  console.log(nodes)
+}
+
+function getEvents(properties) {
+
+}
+
 /**
  * 查找对应的注释
  * @param  {object} loc ast中的loc对象
@@ -57,8 +103,4 @@ function findComment(loc) {
     }
   }
   return null
-}
-
-function traverse(ast) {
-  console.dir(ast.declaration)
 }
