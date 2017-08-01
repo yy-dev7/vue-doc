@@ -13,6 +13,7 @@ export default {
 
   props: {
     message: String, // 标题信息
+    // 提示信息
     hint: String,
     /**
      * 确认的文字

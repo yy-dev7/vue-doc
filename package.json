@@ -9,6 +9,8 @@
   "author": "mervynyang",
   "license": "MIT",
   "devDependencies": {
-    "acorn": "^5.1.1"
+    "acorn": "^5.1.1",
+    "escodegen": "^1.8.1",
+    "jsdoc-vue": "^1.0.0"
   }
 }

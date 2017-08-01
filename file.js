@@ -1,4 +1,4 @@
-{
+var o = {
     "type": "Program",
     "start": 0,
     "end": 743,
@@ -1496,3 +1496,5 @@
     ],
     "sourceType": "module"
 }
+
+console.log(o)
