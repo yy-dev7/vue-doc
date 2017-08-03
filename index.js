@@ -1,35 +1,32 @@
 const fs = require('fs')
-// const acorn = require("acorn")
-// const walk = require("acorn/dist/walk")
-const file = fs.readFileSync('./modal.vue', 'utf8')
+const chalk = require('chalk')
+
 const processComponent = require('./src/processComponent')
+const render = require('./src/renderTemplate')
+const log = console.log
 
-// const comments = []
+function checkDirectorySync(directory) {
+  try {
+    fs.statSync(directory)
+  } catch (e) {
+    fs.mkdirSync(directory)
+  }
+}
 
-// const ast = acorn.parse(getScriptContent(file), {
-//   sourceType: 'module',
-//   ranges: false,
-//   locations: true,
-//   onComment: comments
-// })
+module.exports = function(filePath) {
+  const file = fs.readFileSync(filePath, 'utf8')
+  const fileType = filePath.indexOf('.vue') > -1 ? 'vue' : 'js'
+  const matchFileName = /^(?:.+)(?:\/|\\)([^\/\\]+).(?:vue|js)$/
 
-processComponent(file)
+  checkDirectorySync('./docs')
+  const doc = processComponent(file, fileType)
 
-// walk.full(ast, node => {
-  // if (node.key && node.key.name === 'name') {
-  //   console.log(node.value)
-  // }
+  if (doc) {
+    const fileName = doc.moduleName || filePath.match(matchFileName)[1] || 'anonymous'
 
-  // console.dir(node.type, { depth: null });
-  // console.log('-----------------------------------')
-// })
-
-// var buffer = Buffer.from(JSON.stringify(ast))
-// fs.writeFile("file.js", buffer, 'binary', (err)=>{
-//    if(err) console.log(err)
-//    else console.log('File saved')
-// })
-
-// console.dir(comments, { depth: null });
-
-
+    fs.writeFile(`./docs/${fileName}.html`, render(doc), (err) => {
+      if (err) log(chalk.red(err))
+      else log(chalk.green('文档创建成功!'))
+    })
+  }
+}

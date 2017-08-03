@@ -1,16 +1,21 @@
 {
-  "name": "vue-doc",
+  "name": "vue-document",
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "bin": {
+    "v-doc": "bin/v-doc"
+  },
   "author": "mervynyang",
   "license": "MIT",
   "devDependencies": {
     "acorn": "^5.1.1",
-    "escodegen": "^1.8.1",
-    "jsdoc-vue": "^1.0.0"
+    "acorn-jsx": "^4.0.1",
+    "acorn-object-spread": "^1.0.0",
+    "chalk": "^2.0.1",
+    "escodegen": "^1.8.1"
   }
 }

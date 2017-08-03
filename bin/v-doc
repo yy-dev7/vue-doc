@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+const generateDoc = require('../index')
+
+run(process.argv.slice(2))
+
+function run(options) {
+  if (options.length > 0) {
+    const arg = options[0]
+    if (arg === '-v' || arg === '--version') {
+      showVersion()
+    } else if (arg === '-h' || arg === '--help') {
+      showHelp()
+    } else {
+      generateDoc(arg)
+    }
+  } else {
+    showHelp()
+  }
+}
+
+function showVersion() {
+  const version = require('../package.json').version
+  console.log(`v-doc version ${version}`)
+}
+
+function showHelp() {
+  console.log('Useage: v-doc [options]');
+  console.log('\n Options:')
+  console.log('\t -v, --version')
+  console.log('\t -h, --help')
+  console.log('\t file1.vue file2.vue ... \t create doc')
+}

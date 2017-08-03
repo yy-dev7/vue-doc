@@ -1,8 +1,19 @@
 const fs = require('fs')
-const acorn = require("acorn")
+const acorn = require('acorn-object-spread')
+
+const injectAcornJsx = require('acorn-jsx/inject')
+const injectAcornObjectSpread = require('acorn-object-spread/inject')
+
+injectAcornJsx(acorn)
+injectAcornObjectSpread(acorn)
+
+const walk = require("acorn/dist/walk")
 const escodegen = require('escodegen')
+const chalk = require('chalk')
+
 const utils = require('./utils')
 
+const log = console.log
 const comments = []
 const doc = {
   moduleName: '',
@@ -10,18 +21,23 @@ const doc = {
   events: []
 }
 
-function parseComponent(file) {
-  return acorn.parse(getScriptContent(file), {
+function processComponent(file, fileType) {
+  const scriptContent = getScriptContent(file, fileType)
+  if (!scriptContent) {
+    log(chalk.red('文件读取失败'))
+    return
+  }
+
+  const ast = acorn.parse(scriptContent, {
     sourceType: 'module',
     ranges: false,
     locations: true,
-    onComment: comments
+    onComment: comments,
+    plugins: {
+      jsx: { allowNamespacedObjects: false },
+      objectSpread: true
+    }
   })
-}
-
-function processComponent(file) {
-  const ast = parseComponent(file)
-  // console.log(comments)
   const body = ast.body
 
   // 获取export表达式
@@ -48,11 +64,11 @@ function processComponent(file) {
 
     // 获取methods中的$emit事件
     if (keyName === 'methods') {
-      doc.events = getEvents(property.value.properties)
+      doc.events = getEvents(property.value)
     }
   }
 
-  // console.log(properties)
+  return doc
 }
 
 /**
@@ -61,34 +77,72 @@ function processComponent(file) {
  * @return {object}
  */
 function getProps(nodes) {
-  // console.log(nodes)
-  const results = []
-  const loop = function() {
-
+  const props = []
+  const options = {
+    format: {
+      indent: {
+        style: ''
+      },
+      json: true,
+      newline: ''
+    }
   }
 
   utils.each(nodes, function(node) {
-    if (node.value.type === 'Identifier') {
-      results.push({
-        key: node.key.name,
-        type: node.value.name,
-        comment: findComment(node.loc)
-      })
-    }
-
-    if (node.value.type === 'ObjectExpression') {
-      results.push({
-        key: node.key.name,
-        val: escodegen.generate(node.value)
-      })
-    }
+    props.push(utils.merge({
+      key: node.key.name,
+      comment: findComment(node.loc)
+    }, parseDefinition(escodegen.generate(node.value, options))))
   })
 
-  console.log(results)
+  return props
 }
 
-function getEvents(properties) {
+function parseDefinition(definition) {
+  const results = {}
+  const aryReg = /^\[(.*)\]$/
+  const objReg = /\{(.*)\}/
 
+  if (aryReg.test(definition)) {
+    results.type = definition.match(aryReg)[1]
+  } else if (objReg.test(definition)) {
+    const matchType = /type\s?:([^,]*)/
+    const object = utils.eval(definition)
+
+    results.type = definition.match(matchType) && definition.match(matchType)[1]
+    results.required = !!object.required
+    if (typeof object.default === 'function') {
+      results.default = object.default() ? JSON.stringify(object.default()) : '() => {}'
+    } else if (typeof object.default === 'object') {
+      results.default = JSON.stringify(object.default)
+    } else {
+      results.default = object.default
+    }
+
+  } else {
+    results.type = definition
+  }
+
+  return results
+}
+
+function getEvents(methodsAst) {
+  const events = []
+
+  try {
+    walk.simple(methodsAst, {
+      CallExpression(node) {
+        if (node.callee.property && node.callee.property.name === '$emit') {
+          events.push({
+            key: node.arguments[0].value,
+            comment: findComment(node.loc)
+          })
+        }
+      }
+    })
+  } catch(e) {}
+
+  return events
 }
 
 /**
@@ -106,10 +160,11 @@ function findComment(loc) {
     const commentLocEndLine = comments[i].loc.end.line
     const commentLocStartColumn = comments[i].loc.start.column
 
+    // 找到在同一行右侧的注释 和上面一行的注释
     if (textStartLine === commentLocEndLine
       || (textStartLine - commentLocEndLine === 1 && commentLocStartColumn - textStartColumn <= 2)
       ) {
-      return comments[i].value
+      return comments[i].value.trim()
     }
   }
   return ''
@@ -117,16 +172,22 @@ function findComment(loc) {
 
 /**
  * 获取vue template中的script部分
- * @param  {string} template 文件读取到的内容
- * @return {string}          js内容
+ * @param  {String} template 文件读取到的内容
+ * @return {String}          js内容
  */
-function getScriptContent(template) {
+function getScriptContent(template, fileType) {
+  if (fileType === 'js') {
+    return template
+  }
+
   const EOL = process.platform === 'win32' ? '\r\n' : '\n'
-  const regStr = `<script>${EOL}(.*${EOL})*<\/script>`
-  const scriptContent = template.match(new RegExp(regStr, 'g'))
+  const regStr = `<script>([.${EOL}]*?)<\/script>`
+
+  // const scriptContent = template.match(new RegExp(regStr, 'g'))
+  const scriptContent = template.match(/<script[^>]*>((.|[\n\r])*)<\/script>/im)
 
   // 去掉script标签
-  return scriptContent[0].slice(8, -9)
+  return scriptContent ? scriptContent[0].slice(8, -9) : null
 }
 
 
