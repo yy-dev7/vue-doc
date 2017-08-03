@@ -1,6 +1,6 @@
 {
-  "name": "vue-document",
-  "version": "0.0.1",
+  "name": "vue-gen-doc",
+  "version": "0.0.3",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,7 @@
   },
   "author": "mervynyang",
   "license": "MIT",
-  "devDependencies": {
+  "dependencies": {
     "acorn": "^5.1.1",
     "acorn-jsx": "^4.0.1",
     "acorn-object-spread": "^1.0.0",

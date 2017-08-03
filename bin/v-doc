@@ -28,5 +28,5 @@ function showHelp() {
   console.log('\n Options:')
   console.log('\t -v, --version')
   console.log('\t -h, --help')
-  console.log('\t file1.vue file2.vue ... \t create doc')
+  console.log('\t file.vue \t create doc')
 }
